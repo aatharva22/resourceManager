@@ -75,10 +75,10 @@
 		87DB596C2F3BCED100D387E2 = {
 			isa = PBXGroup;
 			children = (
-				87DB59772F3BCED100D387E2 /* resourceManager */,
 				87DB59872F3BCED300D387E2 /* resourceManagerTests */,
 				87DB59912F3BCED300D387E2 /* resourceManagerUITests */,
 				87DB59762F3BCED100D387E2 /* Products */,
+				87DB59772F3BCED100D387E2 /* resourceManager */,
 			);
 			sourceTree = "<group>";
 		};
