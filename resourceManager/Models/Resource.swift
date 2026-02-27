@@ -4,33 +4,40 @@ import Foundation
 class Resource {
     var id: UUID = UUID()
     var name: String
-    var iconName: String
-    var typeRawValue: String // We store this string so SwiftData stays happy
-    
+
+    // One to many relationship b/w resource and booking
     @Relationship(deleteRule: .cascade)
     var bookings: [Booking] = []
-
-    // 💡 Derived property using the Enum
-    var timeLimit: BookingManager.TimeLimit {
+    
+    //Foreign key to the house table
+    var houseName : House?
+    //  Derived property
+    var timeLimit: Int {
         // We look at the enum, not the name string!
-        switch self.types {
-        case .bathroom: return .bathroom
-        case .kitchen:  return .kitchen
-        case .tvRoom:   return .TV
-        case .laundry:  return .laundry
-        case .gym:      return .gym
+        switch self.name {
+        case "bathroom": return 30
+        case "kitchen":  return 45
+        case "tvRoom":   return 60
+        case "laundry":  return 120
+        case "gym":      return 60
+        default :        return 30
+        }
+    }
+    var icon: String {
+        switch self.name {
+        case "bathroom": return "shower"
+        case "kitchen":  return "fork.knife"
+        case "laundry":  return "washer"
+        case "tvRoom":   return "tv"
+        case "gym":      return "dumbbell"
+        default :        return "questionmark"
         }
     }
 
-    // This helper property turns typeRawValue back into an Enum for the switch above
-    var types: ResourceType {
-        get { ResourceType(rawValue: typeRawValue) ?? .kitchen }
-        set { typeRawValue = newValue.rawValue }
-    }
+   
 
-    init(name: String, iconName: String, type: ResourceType) {
+    init(name: String) {
         self.name = name
-        self.iconName = iconName
-        self.typeRawValue = type.rawValue
+        
     }
 }

@@ -14,14 +14,14 @@ class Booking {
     var id: UUID = UUID()
     var startTime: Date
     var endTime: Date
-    var userName: String
+    var user: User? // Foreign key to the User table
     
-    // The "Foreign Key" link back to the Resource table
+    // The "Foreign Key" link back to the Resource table, on the many side of the relationship
     var resource: Resource?
     
-    init(startTime: Date, endTime: Date, userName: String) {
+    init(startTime: Date, endTime: Date) {
         self.startTime = startTime
         self.endTime = endTime
-        self.userName = userName
+        
     }
 }

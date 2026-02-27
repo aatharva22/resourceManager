@@ -22,29 +22,12 @@ class BookingManager {
         case timeExceeded
     }
     
-    enum TimeLimit {
-        case bathroom
-        case kitchen
-        case TV
-        case laundry
-        case gym
-        
-        var minutes: Int {
-            switch self {
-                case .bathroom: return 30
-                case .kitchen: return 45
-                case .TV: return 30
-                case .laundry: return 120
-                case .gym: return 120
-                
-            }
-        }
-    }
+   
     
     //Function to check maxTime
-    func isDurationValid(start: Date, end: Date, limit: TimeLimit) -> Bool {
+    func isDurationValid(start: Date, end: Date, limit: Int) -> Bool {
             let durationInSeconds = end.timeIntervalSince(start)
-            let allowedSeconds = TimeInterval(limit.minutes * 60)
+            let allowedSeconds = TimeInterval(limit  * 60)
             
             return durationInSeconds <= allowedSeconds
     }
@@ -95,7 +78,7 @@ class BookingManager {
         let userName = user
         
         let predicate = #Predicate<Booking> {booking in
-                userName == booking.userName
+            userName == booking.user?.name
         }
         
         let descriptor = FetchDescriptor<Booking> (
@@ -114,7 +97,7 @@ class BookingManager {
         
     }
     
-    func addBooking(_ resource: Resource, _ start: Date, _ end : Date, _ user : String) throws {
+    func addBooking(_ resource: Resource, _ start: Date, _ end : Date, _ user : User) throws {
         
         // check start time > end Time
         if start > end {
@@ -132,9 +115,9 @@ class BookingManager {
         }
         
         // add Booking
-        let newBooking = Booking(startTime: start, endTime: end, userName: user)
+        let newBooking = Booking(startTime: start, endTime: end)
         newBooking.resource = resource
-        
+        newBooking.user = user
         modelContext.insert(newBooking)
         
     }

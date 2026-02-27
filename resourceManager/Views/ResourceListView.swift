@@ -10,40 +10,40 @@ struct ResourceListView: View {
     var body: some View {
         NavigationStack {
             List(resources) { resource in
-                NavigationLink(value: resource) {
-                    HStack {
-                        Image(systemName: resource.iconName)
-                            .foregroundColor(.blue)
-                        Text(resource.name)
-                        Spacer()
-                        // A quick preview of the limit
-                        Text("\(resource.timeLimit.minutes)m limit")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                    NavigationLink(resource.name, value: resource)
+                }
+            
+                .navigationDestination(for: Resource.self) { resource in
+                    ResourceDetailView(resource: resource)
+                }
+                .navigationTitle("Resources")
+                .toolbar{
+                    Button(action: {}) {
+                        Image(systemName: "plus")
                     }
                 }
             }
-            .navigationTitle("Shared Spaces")
-            .onAppear {
-                // Set up the manager when the view appears
-                bookingManager = BookingManager(modelContext: modelContext)
-            }
-            .toolbar {
-                Button("Add Sample") {
-                    addTestData()
-                }
-            }
-            .navigationDestination(for: Resource.self) { resource in
-                // We'll build this screen next!
-                Text("Booking for \(resource.name)")
-            }
+        .environment(bookingManager) // given to the environment, so can be accesed from all the views
+        .onAppear() {
+            addTestData()
         }
-    }
-
+        }
+    
     func addTestData() {
-        let k = Resource(name: "Main Kitchen", iconName: "kitchen", type: .kitchen)
-        let b = Resource(name: "Master Bath", iconName: "bathroom", type: .bathroom)
+        let k = Resource(name: "kitchen")
+        let b = Resource(name: "bathroom")
         modelContext.insert(k)
         modelContext.insert(b)
     }
+    
+        
+    }
+
+
+   
+
+#Preview {
+    ResourceListView()
+        .modelContainer(for: Resource.self, inMemory: true)
 }
+
