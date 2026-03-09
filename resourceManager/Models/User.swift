@@ -12,9 +12,11 @@ import SwiftData
 class User {
     var id : UUID = UUID()
     var name : String
-    
-    init(name: String) {
+    var password : String
+    init(name: String, password: String) {
         
         self.name = name
+        self.password = password
+        
     }
 }

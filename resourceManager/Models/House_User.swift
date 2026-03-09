@@ -12,7 +12,7 @@ import SwiftData
 @Model
 class House_User {
     var id : UUID = UUID()
-    var houseName : House?
+    var house : House?
     var user : User?
     var isAdmin : Bool = false
     

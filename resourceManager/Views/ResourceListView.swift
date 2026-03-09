@@ -1,39 +1,56 @@
 import SwiftUI
 import _SwiftData_SwiftUI
 struct ResourceListView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query(sort: \Resource.name) private var resources: [Resource]
     
-    // We initialize the manager here
-    @State private var bookingManager: BookingManager?
+    var house: House
+    @Environment(\.modelContext) private var modelContext
+    //@Query(sort: \Resource.name) private var resources: [Resource]
+    @Environment(BookingManager.self) private var manager
+    @State private var resources : [Resource] = []
+    @State private var isPresented: Bool = false
+    
 
     var body: some View {
-        NavigationStack {
-            List(resources) { resource in
+        Group {
+            
+        if resources.isEmpty {
+            ContentUnavailableView("No resources Yet",  systemImage: "house", description: Text("Add resources") )
+            
+        }
+        else {
+            NavigationStack {
+                List(resources) { resource in
                     NavigationLink(resource.name, value: resource)
                 }
-            
+                
                 .navigationDestination(for: Resource.self) { resource in
                     ResourceDetailView(resource: resource)
                 }
                 .navigationTitle("Resources")
                 .toolbar{
-                    Button(action: {}) {
+                    Button(action: {addResource()}) {
                         Image(systemName: "plus")
                     }
                 }
+           }
+            
+            .onAppear() {
+                refreshResources()
             }
-        .environment(bookingManager) // given to the environment, so can be accesed from all the views
-        .onAppear() {
-            addTestData()
         }
+        }.sheet(isPresented: $isPresented) {
+            AddResource(isPresented: $isPresented)
+        }.onDisappear() { 
+            refreshResources()
+            
         }
+    }
     
-    func addTestData() {
-        let k = Resource(name: "kitchen")
-        let b = Resource(name: "bathroom")
-        modelContext.insert(k)
-        modelContext.insert(b)
+    func refreshResources() {
+        resources = manager.fetchResourcesForHouse(house:house)
+    }
+    func addResource() {
+        isPresented = true
     }
     
         
@@ -42,8 +59,8 @@ struct ResourceListView: View {
 
    
 
-#Preview {
-    ResourceListView()
-        .modelContainer(for: Resource.self, inMemory: true)
-}
+//#Preview {
+//    ResourceListView()
+//        .modelContainer(for: Resource.self, inMemory: true)
+//}
 

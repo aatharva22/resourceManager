@@ -7,10 +7,12 @@
 
 import Foundation
 import SwiftData
+import _SwiftData_SwiftUI
 
 @Observable // @observable, lets you keep an eye on the data changes the ui redraws itself
 class BookingManager {
     
+    var currentUser : User?
     var modelContext : ModelContext // Here we save data from swift data
     
     init(modelContext: ModelContext) {
@@ -20,16 +22,17 @@ class BookingManager {
         case overlap
         case invalidTime // Start time is after end time
         case timeExceeded
+        case alreadyExists
     }
     
-   
+    
     
     //Function to check maxTime
     func isDurationValid(start: Date, end: Date, limit: Int) -> Bool {
-            let durationInSeconds = end.timeIntervalSince(start)
-            let allowedSeconds = TimeInterval(limit  * 60)
-            
-            return durationInSeconds <= allowedSeconds
+        let durationInSeconds = end.timeIntervalSince(start)
+        let allowedSeconds = TimeInterval(limit  * 60)
+        
+        return durationInSeconds <= allowedSeconds
     }
     
     // Function to check conflicts
@@ -84,14 +87,14 @@ class BookingManager {
         let descriptor = FetchDescriptor<Booking> (
             predicate : predicate,
             sortBy: [SortDescriptor(\.startTime)]
-            )
+        )
         
         do {
             return try modelContext.fetch(descriptor)
-            } catch {
-                print ("Fetch Failed: \(error.localizedDescription)")
-                return []
-            }
+        } catch {
+            print ("Fetch Failed: \(error.localizedDescription)")
+            return []
+        }
         
         
         
@@ -146,4 +149,203 @@ class BookingManager {
         booking.startTime = newStart
         booking.endTime = newEnd
     }
+    //login
+    func checkLogin (userName : String, password : String) -> Bool {
+        let descriptor = FetchDescriptor<User>(
+            predicate: #Predicate { $0.name == userName  && $0.password == password}
+        )
+        do {
+            let foundUsers = try modelContext.fetch(descriptor)
+            if let user = foundUsers.first {
+                self.currentUser = user
+                return true
+            }
+        } catch {
+            print("Fetch failed: \(error.localizedDescription)")
+        }
+        
+        
+        return false
+    }
+    //register
+    func signUp ( userName : String, password: String) -> Bool {
+        let descriptor = FetchDescriptor<User>(
+            predicate: #Predicate { $0.name == userName }
+        )
+        do {
+            let foundUser  = try modelContext.fetch(descriptor)
+            if foundUser.isEmpty {
+                let newUser = User(name: userName, password: password)
+                modelContext.insert(newUser)
+                try modelContext.save()
+                self.currentUser = newUser
+                
+                return true
+            }
+            else {
+                print("User already exists")
+                return false
+            }
+        }
+        catch{
+            print("Fetch failed: \(error.localizedDescription)")
+            return false
+        }
+    }
+    //sign out
+    func signOut() {
+        currentUser = nil
+    }
+    //prints all users
+    func debugCheckUsers() {
+        let descriptor = FetchDescriptor<User>() // "Get everything of type User"
+        do {
+            let allUsers = try modelContext.fetch(descriptor)
+            print("--- Current Users in Database ---")
+            for user in allUsers {
+                print("ID: \(user.id), Name: \(user.name)")
+            }
+        } catch {
+            print("Fetch failed")
+        }
+    }
+    
+    //create house
+    func createHouse(name:String) -> String{
+        guard let user = currentUser else { return "not logged In"}
+        let descriptor = FetchDescriptor<House>(
+            predicate: #Predicate { $0.name == name }
+        )
+        do {
+            let foundHouse  = try modelContext.fetch(descriptor)
+            if foundHouse.isEmpty {
+                let newHouse = House(name: name)
+                modelContext.insert(newHouse)
+                
+                let bridge = House_User(isAdmin: true)
+                bridge.user = user
+                bridge.house = newHouse
+                modelContext.insert(bridge)
+                
+                try modelContext.save()
+            }
+            else {
+                print("House already exists")
+                return("House already exists")
+            }
+        }
+        catch {
+            print ("fetch Error")
+            return("fetch error")
+        }
+        print("Success")
+        return ("Success")
+    }
+    
+    //Adding user to the house_user model
+    func addUserToHouse(userName: String, house: House) -> String {
+        // 1. Check if this specific user is ALREADY in this specific house
+        let houseId = house.id
+        let bridgeDescriptor = FetchDescriptor<House_User>(
+            predicate: #Predicate { $0.user?.name == userName && $0.house?.id == houseId }
+        )
+        
+        do {
+            let existingBridges = try modelContext.fetch(bridgeDescriptor)
+            if !existingBridges.isEmpty {
+                return "User already added to the house"
+            }
+            
+            // 2. Find the actual User object in the system
+            let userDescriptor = FetchDescriptor<User>(
+                predicate: #Predicate { $0.name == userName }
+            )
+            let foundUsers = try modelContext.fetch(userDescriptor)
+            
+            // FIX: Check if it IS empty to return the error
+            if foundUsers.isEmpty {
+                return "No user exists with the given userName"
+            }
+            
+            // 3. Create the bridge
+            if let userToLink = foundUsers.first {
+                let bridge = House_User(isAdmin: false)
+                bridge.user = userToLink
+                bridge.house = house // Ensure this matches your model property name
+                
+                modelContext.insert(bridge)
+                try modelContext.save()
+                
+                return "User successfully added to the house"
+            }
+            
+        } catch {
+            return "System error: \(error.localizedDescription)"
+        }
+        
+        return "Unknown error occurred"
+    }
+    
+    //    func isCurrentUserAdmin(of : House) -> Bool {
+    //        let house = of
+    //
+    //        let descriptor = FetchDescriptor<House_User>(
+    //            predicate: #Predicate {  $0.user != nil && $0.user! == currentUser && $0.house != nil && $0.house! == house}
+    //        )
+    //        do {
+    //            let foundPair = try modelContext.fetch(descriptor)
+    //            if let house_user_pair = foundPair.first, house_user_pair.isAdmin == true {
+    //                return true
+    //            }
+    //            else {
+    //                return false
+    //            }
+    //        } catch {
+    //            print("Fetch failed")
+    //        }
+    //    }
+    
+    
+    func fetchMyHouses() -> [House] {
+        guard let user = currentUser else { return [] }
+        
+        let targetUserID = user.persistentModelID
+        
+        let descriptor = FetchDescriptor<House_User>(
+            //            predicate: #Predicate<House_User> { bridge in
+            //
+            //                bridge.user != nil && bridge.user!.persistentModelID == targetUserID
+            //            }
+        )
+        
+        do {
+            let pairs = try modelContext.fetch(descriptor)
+            
+            return pairs.filter{$0.user?.persistentModelID == targetUserID}.compactMap{$0.house}
+        } catch {
+            print("Fetch failed: \(error)")
+            return []
+        }
+    }
+    
+    func fetchResourcesForHouse (house:House) -> [Resource] {
+        let descriptor = FetchDescriptor<Resource>()
+        do {
+            let resources = try modelContext.fetch(descriptor)
+            return resources.filter{ $0.houseName == house}
+            
+        } catch {
+            print("Fetch failed \(error)")
+            return []
+        }
+        
+    }
+    
+    func addResourceToHouse(house : House, resourceName:String) {
+        let newResource = Resource(name: resourceName)
+        newResource.houseName = house
+        
+        modelContext.insert(newResource)
+    }
+    
 }

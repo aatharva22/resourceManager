@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-class House {
+class House : Identifiable {
     var id : UUID = UUID()
     var name : String
     

@@ -12,16 +12,17 @@ import SwiftData
 
 @main
 struct ResourceManagerApp : App {
-    
     var body: some Scene {
         WindowGroup {
-            ResourceListView()
+            // No need to pass context here anymore
+            RootView()
         }
-        .modelContainer(for: [Resource.self, Booking.self])
+        // This creates the context for RootView to find later
+        .modelContainer(for: [Resource.self, Booking.self, User.self, House.self, House_User.self])
     }
 }
-#Preview {
-    // This tells the canvas which view to draw
-    ResourceListView()
-        .modelContainer(for: [Resource.self, Booking.self], inMemory: true)
-}
+//#Preview {
+//    // This tells the canvas which view to draw
+//    ResourceListView()
+//        .modelContainer(for: [Resource.self, Booking.self, House.self], inMemory: true)
+//}
