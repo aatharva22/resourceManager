@@ -6,10 +6,10 @@
 //
 import SwiftUI
 
-struct AddMemberSheet: View {
+struct AddUserToHouse: View {
     var house: House
     @Environment(BookingManager.self) private var manager
-    @Environment(\.dismiss) private var dismiss
+    @Binding var showingAddUser : Bool
     
     @State private var userNameToSearch: String = ""
     @State private var statusMessage: String = ""
@@ -40,7 +40,7 @@ struct AddMemberSheet: View {
                         isSuccess = true
                         // Close after a short delay so they can see the success message
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                            dismiss()
+                            showingAddUser = false
                         }
                     } else {
                         isSuccess = false
@@ -54,7 +54,7 @@ struct AddMemberSheet: View {
             .padding()
             .navigationTitle("Add Member")
             .toolbar {
-                Button("Cancel") { dismiss() }
+                Button("Cancel") { showingAddUser = false }
             }
         }
     }

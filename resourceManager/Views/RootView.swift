@@ -27,6 +27,12 @@ struct RootView: View {
                         .tabItem {
                             Label("Home", systemImage: "house.fill")
                         }
+                        NavigationStack {
+                            BookingForUser(user:manager.currentUser!)
+                        }
+                        .tabItem {
+                            Label("My bookings", systemImage: "book.fill")
+                        }
                         
                         NavigationStack{
                             ProfileView(isLoggedIn: $isLoggedIn)

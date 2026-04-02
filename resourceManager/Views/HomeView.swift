@@ -5,6 +5,7 @@ struct HouseListView: View {
     @State private var houses: [House] = []
     @State private var showingAddHouse = false
     
+    
 
     var body: some View {
         Group {
@@ -14,7 +15,7 @@ struct HouseListView: View {
             }
             else {
                 List(houses) { house in
-                    NavigationLink(destination: ResourceListView(house:house)) {
+                    NavigationLink(value:house) {
                         HStack{
                             Image(systemName: "house")
                             
@@ -26,7 +27,10 @@ struct HouseListView: View {
                         }
                     }
                     
-                }.onAppear {
+                }.navigationDestination(for: House.self) { house in 
+                    ResourceListView(house:house)
+                }
+                .onAppear {
                     refreshHouses()
                     print("refreshHomes called from onAppear")
                 }
@@ -45,6 +49,8 @@ struct HouseListView: View {
                 refreshHouses()
                 print("refreshHomes called from onDisappear")
             }
+        
+                    
             
             
     }

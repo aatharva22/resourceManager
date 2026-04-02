@@ -10,7 +10,7 @@ import SwiftData
 import Foundation
 @testable import resourceManager // This allows the test to see your app's code
 
-struct BookingManagerTests {
+struct BookingManagerTest {
 
     @Test func testConflictDetection() throws {
         // 1. Setup a "Fake" in-memory database
@@ -22,18 +22,18 @@ struct BookingManagerTests {
         let manager = BookingManager(modelContext: context)
         
         // 3. Create a Resource and a base Booking
-        let kitchen = Resource(name: "Kitchen", iconName: "fork.knife")
+        let kitchen = Resource(name: "Kitchen")
         let startTime = Date()
         let endTime = startTime.addingTimeInterval(3600) // 1 hour later
         
         // 4. Manually add a booking
-        let existingBooking = Booking(startTime: startTime, endTime: endTime, userName: "Atharva")
+        let existingBooking = Booking(startTime: startTime, endTime: endTime)
         existingBooking.resource = kitchen
         context.insert(existingBooking)
         
         // 5. THE TEST: Try to book a slot that overlaps
         let isAvailable = manager.isSlotAvailable(
-            resource: kitchen,
+            resource: kitchen, user: manager.currentUser!,
             start: startTime.addingTimeInterval(1800), // Starts 30 mins into the first booking
             end: endTime.addingTimeInterval(1800)
         )

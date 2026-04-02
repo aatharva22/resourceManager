@@ -9,15 +9,18 @@ import Foundation
 import SwiftUI
 struct AddResource: View {
     
-    @State private var selectedType = "kitchen"
+    var house : House
+    @State private var selectedName = "kitchen"
     @Binding var isPresented: Bool
     let resourceTypes = ["bathroom", "kitchen", "tvRoom", "laundry", "gym"]
+    @Environment(BookingManager.self) private var manager
+    
 
     var body: some View {
         Form {
             VStack {
                 Section(header: Text("Select Resource Name")) {
-                    Picker("Resource Name", selection: $selectedType) {
+                    Picker("Resource Name", selection: $selectedName) {
                         ForEach(resourceTypes, id: \.self) { type in
                             Text(type)
                         }
@@ -26,9 +29,13 @@ struct AddResource: View {
                     .pickerStyle(.menu)
                 }
                 HStack {
-                    Button("Save",) {
+                    Button("Save") {
                         save()
                     }
+                    Button("Cancel") {
+                        isPresented = false
+                    }
+                    
                 }
                 
             }
@@ -36,6 +43,7 @@ struct AddResource: View {
         }
     }
     func save() {
-        
+        manager.addResourceToHouse(house: house, resourceName: selectedName)
     }
 }
+

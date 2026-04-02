@@ -17,6 +17,7 @@ class BookingManager {
     
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
+        print(URL.applicationSupportDirectory.path(percentEncoded: false))
     }
     enum BookingError: Error {
         case overlap
@@ -36,18 +37,39 @@ class BookingManager {
     }
     
     // Function to check conflicts
-    func isSlotAvailable(resource: Resource, start: Date, end: Date) -> Bool {
-        let existingBookings = fetchBookingsForResource(for: resource)
-        
-        // Check if the requested range overlaps with any existing range
-        for booking in existingBookings {
-            // logic: (RequestedStart < ExistingEnd) AND (RequestedEnd > ExistingStart)
-            if start < booking.endTime && end > booking.startTime {
-                return false // There is an overlap!
-            }
+    func isSlotAvailable(resource: Resource, user: User, start: Date, end: Date) -> Bool {
+        // 1. Check if the User has a conflict
+        let userBookings = fetchBookingsForUser(user: user)
+        if userBookings.contains(where: { start <= $0.endTime && end >= $0.startTime }) {
+            return false
         }
         
-        return true // No overlaps found
+        // 2. Check if the Resource has a conflict (with anyone else)
+        let resourceBookings = resource.bookings  
+        if resourceBookings.contains(where: { start < $0.endTime && end > $0.startTime }) {
+            return false
+        }
+        
+        return true
+    }
+    
+    func fetchBookingsForUser(user: User) -> [Booking] {
+        // Get the ID first to keep the Predicate happy
+        let userID = user.persistentModelID
+        
+        // Tell the database to ONLY give us this user's bookings
+        let predicate = #Predicate<Booking> { booking in
+            booking.user?.persistentModelID == userID
+        }
+        
+        let descriptor = FetchDescriptor<Booking>(predicate: predicate)
+        
+        do {
+            return try modelContext.fetch(descriptor)
+        } catch {
+            print("Fetch failed \(error)")
+            return []
+        }
     }
     
     //Function to fetch booking for a specific resource
@@ -100,7 +122,7 @@ class BookingManager {
         
     }
     
-    func addBooking(_ resource: Resource, _ start: Date, _ end : Date, _ user : User) throws {
+    func addBooking(_ resource: Resource, _ start: Date, _ end : Date,  user : User) throws {
         
         // check start time > end Time
         if start > end {
@@ -108,7 +130,7 @@ class BookingManager {
         }
         
         // check for available slot
-        guard isSlotAvailable(resource: resource, start: start, end: end) else {
+        guard isSlotAvailable(resource: resource, user:user, start: start, end: end) else {
             throw BookingError.overlap
         }
         let limit = resource.timeLimit
@@ -150,44 +172,42 @@ class BookingManager {
         booking.endTime = newEnd
     }
     //login
-    func checkLogin (userName : String, password : String) -> Bool {
+    func checkLogin(userName: String, password: String) -> Bool {
+        // Only query by username — NEVER query by password directly
         let descriptor = FetchDescriptor<User>(
-            predicate: #Predicate { $0.name == userName  && $0.password == password}
+            predicate: #Predicate { $0.name == userName }
         )
         do {
             let foundUsers = try modelContext.fetch(descriptor)
-            if let user = foundUsers.first {
+            if let user = foundUsers.first, user.verifyPassword(password) {
                 self.currentUser = user
                 return true
             }
         } catch {
             print("Fetch failed: \(error.localizedDescription)")
         }
-        
-        
         return false
     }
+    
     //register
-    func signUp ( userName : String, password: String) -> Bool {
+    func signUp(userName: String, password: String) -> Bool {
         let descriptor = FetchDescriptor<User>(
             predicate: #Predicate { $0.name == userName }
         )
         do {
-            let foundUser  = try modelContext.fetch(descriptor)
-            if foundUser.isEmpty {
+            let foundUsers = try modelContext.fetch(descriptor)
+            if foundUsers.isEmpty {
                 let newUser = User(name: userName, password: password)
+                // User.init() hashes the password internally — nothing else to do
                 modelContext.insert(newUser)
                 try modelContext.save()
                 self.currentUser = newUser
-                
                 return true
-            }
-            else {
+            } else {
                 print("User already exists")
                 return false
             }
-        }
-        catch{
+        } catch {
             print("Fetch failed: \(error.localizedDescription)")
             return false
         }
@@ -286,24 +306,26 @@ class BookingManager {
         return "Unknown error occurred"
     }
     
-    //    func isCurrentUserAdmin(of : House) -> Bool {
-    //        let house = of
-    //
-    //        let descriptor = FetchDescriptor<House_User>(
-    //            predicate: #Predicate {  $0.user != nil && $0.user! == currentUser && $0.house != nil && $0.house! == house}
-    //        )
-    //        do {
-    //            let foundPair = try modelContext.fetch(descriptor)
-    //            if let house_user_pair = foundPair.first, house_user_pair.isAdmin == true {
-    //                return true
-    //            }
-    //            else {
-    //                return false
-    //            }
-    //        } catch {
-    //            print("Fetch failed")
-    //        }
-    //    }
+    func isCurrentUserAdmin(of house: House) -> Bool {
+        let houseId = house.id
+        
+        // Ensure currentUser is not nil before querying
+        guard let currentUserName = currentUser?.name else { return false }
+
+        let descriptor = FetchDescriptor<House_User>(
+            predicate: #Predicate { $0.user?.name == currentUserName && $0.house?.id == houseId }
+        )
+        
+        do {
+            let foundPairs = try modelContext.fetch(descriptor)
+            
+            // Use optional chaining and nil-coalescing safely
+            return foundPairs.first?.isAdmin ?? false
+        } catch {
+            print("Fetch failed: \(error.localizedDescription)")
+            return false
+        }
+    }
     
     
     func fetchMyHouses() -> [House] {
